@@ -1,0 +1,60 @@
+node:
+  id: mynode
+  cluster: mycluster
+
+admin:
+  access_log_path: /tmp/admin_access.log
+  address:
+    socket_address: { address: 0.0.0.0, port_value: 9901 }
+
+static_resources:
+  listeners:
+  - name: listener_http
+    address:
+      socket_address: { address: 0.0.0.0, port_value: 80 }
+    filter_chains:
+    - filters:
+      - name: envoy.http_connection_manager
+        config:
+          stat_prefix: egress_http
+          codec_type: AUTO
+          route_config:
+            name: test_route
+            virtual_hosts:
+            - name: web_service_1
+              domains: ["*", "*.ik8s.io", "ik8s.io"]
+              routes:
+              - match: { prefix: "/" }
+                route: { cluster: webcluster1 }
+            - name: web_service_2
+              domains: ["*.k8scast.cn","k8scast.cn"]
+              routes:
+              - match: { prefix: "/" }
+                redirect: 
+                  host_redirect: "www.ik8s.io"
+          http_filters:
+          - name: envoy.router
+
+  clusters:
+  - name: xds_cluster
+    type: STATIC
+    connect_timeout: 0.25s
+    http2_protocol_options: {}
+    load_assignment:
+      cluster_name: xds_cluster
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 172.17.0.7
+                port_value: 7777
+
+dynamic_resources:
+  cds_config:
+    api_config_source:
+      cluster_name: webcluster1
+      api_type: GRPC
+      grpc_services:
+        envoy_grpc:
+          cluster_name: xds_cluster
