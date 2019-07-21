@@ -1,5 +1,5 @@
 node:
-  id: mynode
+  id: sidecar-app1
   cluster: mycluster
 
 admin:
@@ -21,21 +21,28 @@ static_resources:
           route_config:
             name: test_route
             virtual_hosts:
-            - name: web_service_1
+            - name: web-service-1
               domains: ["*", "*.ik8s.io", "ik8s.io"]
               routes:
               - match: { prefix: "/" }
-                route: { cluster: webcluster1 }
-            - name: web_service_2
-              domains: ["*.k8scast.cn","k8scast.cn"]
-              routes:
-              - match: { prefix: "/" }
-                redirect: 
-                  host_redirect: "www.ik8s.io"
+                route: { cluster: web-cluster-1 }
           http_filters:
           - name: envoy.router
 
   clusters:
+  - name: web-cluster-1
+    connect_timeout: 0.25s
+    type: EDS
+    lb_policy: ROUND_ROBIN
+    eds_cluster_config:
+      service_name: web-cluster-1
+      eds_config:
+        api_config_source:
+          api_type: GRPC
+          grpc_services:
+            envoy_grpc:
+              cluster_name: xds_cluster
+
   - name: xds_cluster
     type: STATIC
     connect_timeout: 0.25s
@@ -47,14 +54,5 @@ static_resources:
         - endpoint:
             address:
               socket_address:
-                address: 172.17.0.7
-                port_value: 7777
-
-dynamic_resources:
-  cds_config:
-    api_config_source:
-      cluster_name: webcluster1
-      api_type: GRPC
-      grpc_services:
-        envoy_grpc:
-          cluster_name: xds_cluster
+                address: 172.17.0.2
+                port_value: 8081

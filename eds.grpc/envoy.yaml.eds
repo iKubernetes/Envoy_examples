@@ -25,18 +25,12 @@ static_resources:
               domains: ["*", "*.ik8s.io", "ik8s.io"]
               routes:
               - match: { prefix: "/" }
-                route: { cluster: webcluster1 }
-            - name: web_service_2
-              domains: ["*.k8scast.cn","k8scast.cn"]
-              routes:
-              - match: { prefix: "/" }
-                redirect: 
-                  host_redirect: "www.ik8s.io"
+                route: { cluster: web-cluster-1 }
           http_filters:
           - name: envoy.router
 
   clusters:
-  - name: webcluster1
+  - name: web-cluster-1
     type: EDS
     connect_timeout: 0.25s
     eds_cluster_config:
